@@ -1,9 +1,9 @@
 package ua.leirimnad;
 
-public class RedBlackTree<T extends Comparable<T>> {
+public class OrderStatisticTree<T extends Comparable<T>> {
     protected Node root;
 
-    public RedBlackTree() {
+    public OrderStatisticTree() {
         this.root = nullNode;
     }
 
@@ -13,6 +13,7 @@ public class RedBlackTree<T extends Comparable<T>> {
         Node z = new Node(key);
         while (!isNullNode(x)){
             y = x;
+            x.size++;
             if (key.compareTo(x.key) < 0)
                 x = x.leftChild;
             else
@@ -26,6 +27,7 @@ public class RedBlackTree<T extends Comparable<T>> {
         else
             y.rightChild = z;
 
+        z.size = 1;
         this.insertFixup(z);
     }
 
@@ -69,15 +71,7 @@ public class RedBlackTree<T extends Comparable<T>> {
     }
 
     public void delete(T key){
-        Node z = this.root;
-        while (!isNullNode(z)){
-            if (key.compareTo(z.key) == 0)
-                break;
-            else if (key.compareTo(z.key) < 0)
-                z = z.leftChild;
-            else
-                z = z.rightChild;
-        }
+        Node z = find(key);
         if (isNullNode(z))
             return;
 
@@ -92,6 +86,12 @@ public class RedBlackTree<T extends Comparable<T>> {
             x = y.leftChild;
         else
             x = y.rightChild;
+
+        Node i = y;
+        while (!isNullNode(i)){
+            i.size--;
+            i = i.parent;
+        }
 
         x.parent = y.parent;
         if (isNullNode(y.parent))
@@ -184,6 +184,9 @@ public class RedBlackTree<T extends Comparable<T>> {
 
         second.leftChild = first;
         first.parent = second;
+
+        second.size = first.size;
+        first.size = first.leftChild.size + first.rightChild.size + 1;
     }
 
     protected void rightRotate(Node first){
@@ -203,6 +206,9 @@ public class RedBlackTree<T extends Comparable<T>> {
 
         second.rightChild = first;
         first.parent = second;
+
+        second.size = first.size;
+        first.size = first.leftChild.size + first.rightChild.size + 1;
     }
 
     protected int blackHeight(Node x){
@@ -232,10 +238,76 @@ public class RedBlackTree<T extends Comparable<T>> {
         return x;
     }
 
+    public T select(int rank){
+        if (rank <= 0 || rank > this.root.size)
+            return null;
+        return select(this.root, rank);
+    }
+
+    private T select(Node x, int i){
+        int r = x.leftChild.size + 1;
+        if (i == r)
+            return x.key;
+        else if (i < r)
+            return select(x.leftChild, i);
+        return select(x.rightChild, i-r);
+    }
+
+    public int rank(T key){
+        Node z = findSymmetric(key);
+        if (isNullNode(z))
+            return 0;
+        return rank(z);
+    }
+
+    private int rank(Node x){
+        int r = x.leftChild.size + 1;
+        Node y = x;
+        while (!isNullNode(y)){
+            if (y.equals(y.parent.rightChild))
+                r = r + y.parent.leftChild.size + 1;
+            y = y.parent;
+        }
+        return r;
+    }
+
+    private Node find(T key){
+        Node z = this.root;
+        while (!isNullNode(z)){
+            if (key.compareTo(z.key) == 0)
+                break;
+            else if (key.compareTo(z.key) < 0)
+                z = z.leftChild;
+            else
+                z = z.rightChild;
+        }
+
+        return z;
+    }
+
+    private Node findSymmetric(T key){
+        return findSymmetric(this.root, key);
+    }
+
+    private Node findSymmetric(Node z, T key){
+        if (isNullNode(z))
+            return nullNode;
+
+        Node leftRes = findSymmetric(z.leftChild, key);
+        if (!isNullNode(leftRes))
+            return leftRes;
+
+        if (z.key.equals(key))
+            return z;
+
+        return findSymmetric(z.rightChild, key);
+    }
+
     protected class Node {
         public boolean black;
         public Node parent, leftChild, rightChild;
         public T key;
+        public int size;
 
         public Node(T key, Node parent, Node leftChild, Node rightChild, boolean black) {
             this.black = black;
@@ -243,6 +315,7 @@ public class RedBlackTree<T extends Comparable<T>> {
             this.leftChild = leftChild;
             this.rightChild = rightChild;
             this.key = key;
+            this.size = 0;
         }
 
         public Node(T key) {
@@ -251,6 +324,7 @@ public class RedBlackTree<T extends Comparable<T>> {
             this.leftChild = nullNode;
             this.rightChild = nullNode;
             this.key = key;
+            this.size = 0;
         }
     }
 
@@ -267,9 +341,9 @@ public class RedBlackTree<T extends Comparable<T>> {
         for (int i = 0; i < tabs; i++)
             System.out.print("\t");
         if (isNullNode(x))
-            System.out.println("<-> null");
+            System.out.println(">  < null");
         else {
-            System.out.println("<" + x.key + "> "+ (x.black ? "BLACK" : "red"));
+            System.out.println(">" + x.key + "< "+ (x.black ? "black" : "red") + ", s=" + x.size);
             print(x.leftChild, tabs+1);
             print(x.rightChild, tabs+1);
         }
